@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ERD - quiz_app</title>
+    <style>
+        /* Dark theme CSS */
+        body {
+            background-color: #1e1e1e;
+            color: #c0c0c0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        h1 {
+            color: #61dafb;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            padding: 20px;
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        .mermaid {
+            background-color: #272822;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            display: flex;
+            justify-content: center;
+        }
+        a {
+            display: block;
+            color: #61dafb;
+            text-decoration: none;
+            text-align: center;
+            margin: 20px auto;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            maxTextSize: 100000  // Increase the limit as needed
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Entity-Relationship Diagram for quiz_app</h1>
+        <div class="mermaid">
+            erDiagram
+    User {
+        id BigAutoField
+        achievements ForeignKey
+        attempts ForeignKey
+        class_group ForeignKey
+        groups ManyToManyField
+        leaderboard_entries ForeignKey
+        logentry ForeignKey
+        progress ForeignKey
+        systemlog ForeignKey
+        task ForeignKey
+        taught_classes ForeignKey
+        topic ForeignKey
+        user_permissions ManyToManyField
+        avatar FileField
+        date_joined DateTimeField
+        email CharField
+        first_name CharField
+        game_level PositiveSmallIntegerField
+        is_active BooleanField
+        is_staff BooleanField
+        is_superuser BooleanField
+        last_activity DateField
+        last_login DateTimeField
+        last_name CharField
+        password CharField
+        patronymic CharField
+        role CharField
+        streak_days PositiveIntegerField
+        total_xp PositiveIntegerField
+        username CharField
+    }
+    ClassGroup {
+        id BigAutoField
+        leaderboards ForeignKey
+        students ForeignKey
+        teacher ForeignKey
+        created_at DateTimeField
+        description TextField
+        is_active BooleanField
+        name CharField
+    }
+    Subject {
+        id BigAutoField
+        topics ForeignKey
+        description TextField
+        icon CharField
+        order PositiveSmallIntegerField
+        title CharField
+    }
+    Topic {
+        id BigAutoField
+        created_by ForeignKey
+        subject ForeignKey
+        tasks ForeignKey
+        user_progress ForeignKey
+        created_at DateTimeField
+        description TextField
+        order PositiveSmallIntegerField
+        theory_text TextField
+        title CharField
+        updated_at DateTimeField
+    }
+    Task {
+        id BigAutoField
+        attempts ForeignKey
+        created_by ForeignKey
+        options ForeignKey
+        topic ForeignKey
+        correct_answer_text CharField
+        created_at DateTimeField
+        description TextField
+        difficulty IntegerField
+        is_active BooleanField
+        max_steps PositiveSmallIntegerField
+        operation_1 CharField
+        operation_2 CharField
+        optimal_steps PositiveSmallIntegerField
+        order PositiveSmallIntegerField
+        start_value IntegerField
+        target_value IntegerField
+        task_type CharField
+        title CharField
+        updated_at DateTimeField
+        xp_reward PositiveIntegerField
+    }
+    TaskOption {
+        id BigAutoField
+        task ForeignKey
+        is_correct BooleanField
+        match_key CharField
+        match_value CharField
+        order PositiveSmallIntegerField
+        text CharField
+    }
+    UserProgress {
+        id BigAutoField
+        topic ForeignKey
+        user ForeignKey
+        best_score PositiveIntegerField
+        completed_at DateTimeField
+        is_completed BooleanField
+        started_at DateTimeField
+        tasks_completed PositiveIntegerField
+        tasks_total PositiveIntegerField
+        total_errors PositiveIntegerField
+        total_xp_earned PositiveIntegerField
+        updated_at DateTimeField
+    }
+    LevelAttempt {
+        id BigAutoField
+        task ForeignKey
+        user ForeignKey
+        errors_made PositiveSmallIntegerField
+        finished_at DateTimeField
+        is_success BooleanField
+        solution_path JSONField
+        started_at DateTimeField
+        steps_taken PositiveSmallIntegerField
+        time_spent PositiveIntegerField
+        xp_earned PositiveIntegerField
+    }
+    Achievement {
+        id BigAutoField
+        earned_by ForeignKey
+        ach_type CharField
+        badge_color CharField
+        condition_value PositiveIntegerField
+        description TextField
+        icon CharField
+        is_hidden BooleanField
+        title CharField
+        xp_reward PositiveIntegerField
+    }
+    UserAchievement {
+        id BigAutoField
+        achievement ForeignKey
+        user ForeignKey
+        earned_at DateTimeField
+    }
+    Leaderboard {
+        id BigAutoField
+        class_group ForeignKey
+        user ForeignKey
+        period CharField
+        rank PositiveSmallIntegerField
+        recorded_at DateTimeField
+        tasks_done PositiveIntegerField
+        total_xp PositiveIntegerField
+        week_start DateField
+    }
+    SystemLog {
+        id BigAutoField
+        user ForeignKey
+        created_at DateTimeField
+        ip_address GenericIPAddressField
+        level CharField
+        message TextField
+    }
+    Group }|--o{ User : has
+    Permission }|--o{ User : has
+    ClassGroup |o--o{ User : has
+    Subject ||--|{ Topic : has
+    User ||--o{ Topic : has
+    Topic ||--|{ Task : has
+    User ||--o{ Task : has
+    Task ||--|{ TaskOption : has
+    User ||--|{ UserProgress : has
+    Topic ||--|{ UserProgress : has
+    User ||--|{ LevelAttempt : has
+    Task ||--|{ LevelAttempt : has
+    User ||--|{ UserAchievement : has
+    Achievement ||--|{ UserAchievement : has
+    ClassGroup ||--o{ Leaderboard : has
+    User ||--|{ Leaderboard : has
+    User ||--o{ SystemLog : has
+        </div>
+        <a href="D:\TrycreateDjango\Quiz-main\erd_index.html">Back to Index</a>
+    </div>
+</body>
+</html>

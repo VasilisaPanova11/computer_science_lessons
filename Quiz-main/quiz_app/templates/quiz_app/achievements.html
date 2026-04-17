@@ -1,0 +1,131 @@
+{% extends 'quiz_app/base.html' %}
+
+{% block title %}Достижения — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .page-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+
+  .ach-summary {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .9rem;
+    color: var(--text-secondary);
+  }
+  .ach-summary strong { color: var(--xp-color); font-family: var(--font-mono); }
+
+  .ach-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .ach-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    transition: all var(--transition);
+  }
+  .ach-card.earned {
+    border-color: rgba(251,191,36,.4);
+    background: linear-gradient(135deg, var(--bg-card), #1a1500);
+  }
+  .ach-card.locked {
+    opacity: .5;
+    filter: grayscale(.7);
+  }
+  .ach-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+  .ach-card-top {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .ach-icon {
+    font-size: 2.2rem;
+    width: 50px; height: 50px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .ach-card.earned .ach-icon {
+    background: rgba(251,191,36,.08);
+    border: 1px solid rgba(251,191,36,.2);
+  }
+
+  .ach-title { font-weight: 700; font-size: .95rem; }
+  .ach-type  { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .ach-desc  { font-size: .82rem; color: var(--text-secondary); line-height: 1.5; }
+
+  .ach-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: .25rem;
+  }
+  .ach-xp    { font-family: var(--font-mono); font-size: .82rem; color: var(--xp-color); }
+  .ach-date  { font-size: .75rem; color: var(--text-muted); }
+  .ach-locked-label { font-size: .75rem; color: var(--text-muted); font-style: italic; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">🎖 Достижения</div>
+  <div class="ach-summary">
+    Получено: <strong>{{ earned_count }}</strong> / {{ total_count }}
+  </div>
+</div>
+
+<!-- Прогресс-бар по ачивкам -->
+<div class="card" style="margin-bottom:1.5rem;padding:1rem 1.25rem">
+  <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-muted);margin-bottom:.4rem">
+    <span>Прогресс достижений</span>
+    <span>{% widthratio earned_count total_count 100 %}%</span>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar progress-bar--xp"
+         style="width:{% widthratio earned_count total_count 100 %}%"></div>
+  </div>
+</div>
+
+<div class="ach-grid">
+  {% for item in achs_data %}
+    <div class="ach-card {% if item.earned %}earned{% else %}locked{% endif %}">
+      <div class="ach-card-top">
+        <div class="ach-icon">{{ item.ach.icon }}</div>
+        <div>
+          <div class="ach-title">{{ item.ach.title }}</div>
+          <div class="ach-type">{{ item.ach.get_ach_type_display }}</div>
+        </div>
+      </div>
+      <div class="ach-desc">{{ item.ach.description }}</div>
+      <div class="ach-footer">
+        <span class="ach-xp">+{{ item.ach.xp_reward }} XP</span>
+        {% if item.earned %}
+          <span class="ach-date">{{ item.earned_at|date:"d.m.Y" }}</span>
+        {% else %}
+          <span class="ach-locked-label">Не получено</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

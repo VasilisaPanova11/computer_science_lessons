@@ -1,0 +1,184 @@
+{% extends 'quiz_app/base.html' %}
+
+{% block title %}Таблица лидеров — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .page-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+
+  .class-filter {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+  }
+  .class-filter a {
+    font-size: .85rem;
+    padding: .35rem .8rem;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: all var(--transition);
+  }
+  .class-filter a:hover,
+  .class-filter a.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,142,247,.08);
+  }
+
+  .leaderboard-table {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .lb-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto auto;
+    align-items: center;
+    gap: 1rem;
+    padding: .9rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--bg-hover); }
+  .lb-row.is-me {
+    background: rgba(79,142,247,.07);
+    border-color: rgba(79,142,247,.2);
+  }
+
+  .lb-rank {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .lb-rank.r1 { color: #fbbf24; }
+  .lb-rank.r2 { color: #9ca3af; }
+  .lb-rank.r3 { color: #cd7c3a; }
+  .lb-medal { font-size: 1.5rem; }
+
+  .lb-user { display: flex; align-items: center; gap: .75rem; }
+  .lb-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--bg-hover);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: .9rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .lb-avatar.me { border-color: var(--accent); color: var(--accent); }
+  .lb-name  { font-weight: 600; font-size: .95rem; }
+  .lb-class { font-size: .78rem; color: var(--text-muted); }
+
+  .lb-level {
+    font-family: var(--font-display);
+    font-size: .9rem;
+    color: var(--text-secondary);
+    text-align: right;
+  }
+  .lb-xp {
+    font-family: var(--font-mono);
+    font-size: .9rem;
+    color: var(--xp-color);
+    text-align: right;
+    min-width: 70px;
+  }
+
+  .you-badge {
+    display: inline-block;
+    font-size: .65rem;
+    background: rgba(79,142,247,.15);
+    color: var(--accent);
+    border-radius: 100px;
+    padding: .1rem .4rem;
+    margin-left: .35rem;
+    vertical-align: middle;
+  }
+
+  .empty-state { text-align:center; padding:3rem; color:var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div class="page-title">🏆 Таблица лидеров</div>
+  <div class="class-filter">
+    <a href="{% url 'leaderboard' %}"
+       class="{% if not class_group %}active{% endif %}">Все</a>
+    {% for cls in all_classes %}
+      <a href="{% url 'leaderboard' %}?class={{ cls.id }}"
+         class="{% if class_group and class_group.id == cls.id %}active{% endif %}">
+        {{ cls.name }}
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if class_group %}
+  <p class="text-muted mb-2">Класс: <strong>{{ class_group.name }}</strong></p>
+{% endif %}
+
+{% if ranked %}
+  <div class="leaderboard-table">
+    {% for entry in ranked %}
+      <div class="lb-row {% if entry.is_me %}is-me{% endif %}">
+        <!-- Место -->
+        <div class="lb-rank
+          {% if entry.rank == 1 %}r1{% elif entry.rank == 2 %}r2{% elif entry.rank == 3 %}r3{% endif %}">
+          {% if entry.rank == 1 %}🥇
+          {% elif entry.rank == 2 %}🥈
+          {% elif entry.rank == 3 %}🥉
+          {% else %}{{ entry.rank }}{% endif %}
+        </div>
+
+        <!-- Пользователь -->
+        <div class="lb-user">
+          <div class="lb-avatar {% if entry.is_me %}me{% endif %}">
+            {{ entry.student.first_name|first }}{{ entry.student.last_name|first }}
+          </div>
+          <div>
+            <div class="lb-name">
+              {{ entry.student.last_name }} {{ entry.student.first_name }}
+              {% if entry.is_me %}<span class="you-badge">Вы</span>{% endif %}
+            </div>
+            {% if entry.student.class_group %}
+              <div class="lb-class">{{ entry.student.class_group.name }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Уровень -->
+        <div class="lb-level">Ур. {{ entry.student.game_level }}</div>
+
+        <!-- XP -->
+        <div class="lb-xp">{{ entry.student.total_xp }} XP</div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <p>Нет данных для отображения.</p>
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ИС Геймификация{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'quiz_app/css/style.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Навигация -->
+<nav class="navbar">
+  <a class="navbar-brand" href="{% url 'dashboard' %}">🎮 ГМФ<span>ИНФО</span></a>
+
+  <ul class="navbar-nav">
+    <li><a href="{% url 'dashboard' %}"   {% if request.resolver_match.url_name == 'dashboard'    %}class="active"{% endif %}>📊 Дашборд</a></li>
+    <li><a href="{% url 'subjects' %}"    {% if request.resolver_match.url_name == 'subjects'     %}class="active"{% endif %}>📚 Разделы</a></li>
+    <li><a href="{% url 'leaderboard' %}" {% if request.resolver_match.url_name == 'leaderboard'  %}class="active"{% endif %}>🏆 Рейтинг</a></li>
+    <li><a href="{% url 'achievements' %}"{% if request.resolver_match.url_name == 'achievements' %}class="active"{% endif %}>🎖 Ачивки</a></li>
+    {% if user.role == 'teacher' or user.is_staff %}
+    <li><a href="{% url 'classes' %}"     {% if request.resolver_match.url_name == 'classes'      %}class="active"{% endif %}>🏫 Классы</a></li>
+    {% endif %}
+  </ul>
+
+  <div class="navbar-user">
+    {% if user.streak_days > 0 %}
+      <span class="badge badge-warning">🔥 {{ user.streak_days }}</span>
+    {% endif %}
+    <div class="navbar-avatar">{{ user.first_name|first }}{{ user.last_name|first }}</div>
+    <a href="{% url 'profile' %}" class="btn btn-ghost btn-sm">{{ user.first_name }}</a>
+    <form method="post" action="{% url 'logout' %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-ghost btn-sm">Выйти</button>
+    </form>
+  </div>
+</nav>
+
+<!-- Флэш-сообщения Django -->
+{% if messages %}
+  <div style="position:fixed;top:72px;right:1.5rem;z-index:200;display:flex;flex-direction:column;gap:.5rem;max-width:380px">
+    {% for msg in messages %}
+      <div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} show"
+           style="display:block">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Основной макет: сайдбар + контент -->
+<div class="layout">
+  <!-- Сайдбар -->
+  <aside class="sidebar">
+    <!-- XP-виджет -->
+    <div class="xp-widget">
+      <div class="xp-widget-top">
+        <span class="xp-level">Уровень {{ user.game_level }}</span>
+        <span class="xp-amount">{{ user.total_xp }} XP</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar progress-bar--xp"
+             style="width:{{ user.xp_progress_percent }}%"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section-title">Меню</div>
+    <a class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+       href="{% url 'dashboard' %}"><span class="icon">📊</span> Дашборд</a>
+    <a class="sidebar-link {% if request.resolver_match.url_name == 'subjects' %}active{% endif %}"
+       href="{% url 'subjects' %}"><span class="icon">📚</span> Разделы</a>
+    <a class="sidebar-link {% if request.resolver_match.url_name == 'leaderboard' %}active{% endif %}"
+       href="{% url 'leaderboard' %}"><span class="icon">🏆</span> Рейтинг</a>
+    <a class="sidebar-link {% if request.resolver_match.url_name == 'achievements' %}active{% endif %}"
+       href="{% url 'achievements' %}"><span class="icon">🎖</span> Достижения</a>
+    <a class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+       href="{% url 'profile' %}"><span class="icon">👤</span> Профиль</a>
+
+    {% if user.role == 'teacher' or user.role == 'admin' %}
+    <div class="sidebar-section-title">Учитель</div>
+    <a class="sidebar-link {% if request.resolver_match.url_name == 'classes' %}active{% endif %}"
+       href="{% url 'classes' %}"><span class="icon">🏫</span> Мои классы</a>
+    {% endif %}
+  </aside>
+
+  <!-- Основной контент -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

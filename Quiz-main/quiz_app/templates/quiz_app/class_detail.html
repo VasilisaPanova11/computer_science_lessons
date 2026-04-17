@@ -1,0 +1,197 @@
+{% extends 'quiz_app/base.html' %}
+
+{% block title %}{{ class_group.name }} — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .breadcrumb { display:flex; align-items:center; gap:.5rem; font-size:.85rem; color:var(--text-muted); margin-bottom:1.25rem; }
+  .breadcrumb a { color:var(--text-secondary); }
+  .breadcrumb a:hover { color:var(--accent); }
+
+  .class-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .class-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+
+  .class-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+  @media(max-width:800px){ .two-col{ grid-template-columns:1fr; } }
+
+  /* Список учеников */
+  .student-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto auto auto;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+  }
+  .student-row:last-child { border-bottom: none; }
+  .student-rank { font-family: var(--font-display); font-weight: 700; text-align: center; color: var(--text-muted); }
+  .student-rank.r1 { color: #fbbf24; }
+  .student-rank.r2 { color: #9ca3af; }
+  .student-rank.r3 { color: #cd7c3a; }
+
+  .student-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; font-weight: 700; color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .student-name { font-weight: 500; }
+  .student-xp   { font-family: var(--font-mono); font-size: .82rem; color: var(--xp-color); }
+  .student-lvl  { font-size: .82rem; color: var(--text-muted); }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .85rem;
+    padding: .2rem .4rem;
+    border-radius: 4px;
+    transition: all var(--transition);
+  }
+  .remove-btn:hover { color: var(--danger); background: rgba(242,92,126,.1); }
+
+  /* Проблемные темы */
+  .problem-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .55rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+  }
+  .problem-row:last-child { border-bottom: none; }
+  .problem-errors { font-family: var(--font-mono); font-size: .82rem; color: var(--danger); }
+
+  /* Форма добавления ученика */
+  .add-student-form { display: flex; gap: .5rem; }
+  .add-student-form .form-control { max-width: 220px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'classes' %}">Классы</a>
+  <span>›</span>
+  <span>{{ class_group.name }}</span>
+</div>
+
+<div class="class-header">
+  <div>
+    <div class="class-title">🏫 Класс {{ class_group.name }}</div>
+    {% if class_group.description %}
+      <p class="text-muted" style="font-size:.9rem">{{ class_group.description }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Обзорная статистика -->
+<div class="class-overview">
+  <div class="stat-card">
+    <div class="stat-icon">👥</div>
+    <div class="stat-value">{{ students.count }}</div>
+    <div class="stat-label">Учеников</div>
+  </div>
+  {% if students %}
+    <div class="stat-card">
+      <div class="stat-icon">⚡</div>
+      <div class="stat-value text-accent">{{ students.first.game_level }}</div>
+      <div class="stat-label">Макс. уровень</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-value" style="color:var(--xp-color)">{{ students.first.total_xp }}</div>
+      <div class="stat-label">Макс. XP</div>
+    </div>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <!-- Список учеников -->
+  <div class="card">
+    <div style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:1rem">
+      Рейтинг учеников
+    </div>
+
+    {% if students %}
+      {% for student in students %}
+        <div class="student-row">
+          <div class="student-rank {% if forloop.counter == 1 %}r1{% elif forloop.counter == 2 %}r2{% elif forloop.counter == 3 %}r3{% endif %}">
+            {{ forloop.counter }}
+          </div>
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <div class="student-avatar">{{ student.first_name|first }}{{ student.last_name|first }}</div>
+            <div>
+              <div class="student-name">{{ student.last_name }} {{ student.first_name }}</div>
+              <div style="font-size:.72rem;color:var(--text-muted)">@{{ student.username }}</div>
+            </div>
+          </div>
+          <div class="student-lvl">Ур.{{ student.game_level }}</div>
+          <div class="student-xp">{{ student.total_xp }} XP</div>
+          <form method="post" action="{% url 'class_detail' class_group.id %}"
+                onsubmit="return confirm('Удалить из класса?')">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="remove_student">
+            <input type="hidden" name="student_id" value="{{ student.id }}">
+            <button type="submit" class="remove-btn" title="Удалить из класса">✕</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted" style="font-size:.88rem">В классе пока нет учеников.</p>
+    {% endif %}
+
+    <!-- Форма добавления ученика -->
+    <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.5rem">Добавить ученика по логину:</div>
+      <form method="post" action="{% url 'class_detail' class_group.id %}" class="add-student-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_student">
+        <input type="text" name="username" class="form-control"
+               placeholder="Логин ученика" required>
+        <button type="submit" class="btn btn-primary btn-sm">Добавить</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Проблемные темы -->
+  <div class="card">
+    <div style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:1rem">
+      ⚠️ Проблемные темы
+    </div>
+    {% if problem_topics %}
+      {% for pt in problem_topics %}
+        <div class="problem-row">
+          <span>{{ pt.topic__title }}</span>
+          <span class="problem-errors">{{ pt.errors }} ошибок</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted" style="font-size:.88rem">Данных пока нет.</p>
+    {% endif %}
+    <p class="text-muted mt-2" style="font-size:.78rem">
+      Темы с наибольшим количеством ошибок по всему классу.
+    </p>
+  </div>
+</div>
+
+{% endblock %}

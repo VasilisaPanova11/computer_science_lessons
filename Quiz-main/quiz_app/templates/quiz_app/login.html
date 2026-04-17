@@ -1,0 +1,145 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход — ИС Геймификация</title>
+  <link rel="stylesheet" href="{% static 'quiz_app/css/style.css' %}">
+  <style>
+    body {
+      display:flex; align-items:center; justify-content:center; min-height:100vh;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(79,142,247,.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(124,58,237,.06) 0%, transparent 50%),
+        var(--bg-deep);
+    }
+    .auth-wrap  { width:100%; max-width:420px; padding:1rem; }
+    .auth-logo  { text-align:center; margin-bottom:2rem; }
+    .auth-logo-icon {
+      font-size:3rem; display:block; margin-bottom:.5rem;
+      animation:float 3s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .auth-logo-title { font-family:var(--font-display); font-size:1.8rem; font-weight:700; letter-spacing:.06em; }
+    .auth-logo-title span { color:var(--accent); }
+    .auth-logo-sub { font-size:.85rem; color:var(--text-muted); margin-top:.25rem; }
+    .auth-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:2rem; box-shadow:0 24px 64px rgba(0,0,0,.5); }
+    .tabs { display:flex; background:var(--bg-deep); border-radius:var(--radius-sm); padding:3px; margin-bottom:1.75rem; }
+    .tab-btn { flex:1; background:none; border:none; color:var(--text-secondary); font-family:var(--font-display); font-weight:600; font-size:.95rem; padding:.55rem; border-radius:calc(var(--radius-sm) - 2px); cursor:pointer; transition:all var(--transition); letter-spacing:.04em; }
+    .tab-btn.active { background:var(--bg-card); color:var(--text-primary); box-shadow:0 1px 6px rgba(0,0,0,.4); }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+    .footer-note { text-align:center; font-size:.78rem; color:var(--text-muted); margin-top:1.5rem; line-height:1.5; }
+    .forgot-link { font-size:.82rem; color:var(--text-muted); }
+    .forgot-link:hover { color:var(--accent); }
+  </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-logo">
+    <span class="auth-logo-icon">🎮</span>
+    <div class="auth-logo-title">ГЕЙМИФИКАЦИЯ <span>ИНФО</span></div>
+    <div class="auth-logo-sub">Обучение информатике с игровыми механиками</div>
+  </div>
+
+  <div class="auth-card">
+    <!-- Переключатель вкладок -->
+    <div class="tabs">
+      <button class="tab-btn {% if tab != 'register' %}active{% endif %}"
+              onclick="switchTab('login')">Вход</button>
+      <button class="tab-btn {% if tab == 'register' %}active{% endif %}"
+              onclick="switchTab('register')">Регистрация</button>
+    </div>
+
+    <!-- Ошибки Django messages -->
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-danger show">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- ── Форма входа ── -->
+    <div class="tab-pane {% if tab != 'register' %}active{% endif %}" id="pane-login">
+      <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="form-label" for="id_email">Email</label>
+          <input type="email" id="id_email" name="email" class="form-control"
+                 placeholder="student@school.ru" required autocomplete="email"
+                 value="{{ request.POST.email|default:'' }}">
+        </div>
+        <div class="form-group">
+          <div class="d-flex align-center" style="justify-content:space-between;margin-bottom:.4rem">
+            <label class="form-label" for="id_password" style="margin:0">Пароль</label>
+            <a href="{% url 'password_reset' %}" class="forgot-link">Забыли пароль?</a>
+          </div>
+          <input type="password" id="id_password" name="password" class="form-control"
+                 placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Войти</button>
+      </form>
+    </div>
+
+    <!-- ── Форма регистрации ── -->
+    <div class="tab-pane {% if tab == 'register' %}active{% endif %}" id="pane-register">
+      <form method="post" action="{% url 'register' %}">
+        {% csrf_token %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="id_last_name">Фамилия</label>
+            <input type="text" id="id_last_name" name="last_name" class="form-control"
+                   placeholder="Иванов" required
+                   value="{{ form_data.last_name|default:'' }}">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="id_first_name">Имя</label>
+            <input type="text" id="id_first_name" name="first_name" class="form-control"
+                   placeholder="Иван" required
+                   value="{{ form_data.first_name|default:'' }}">
+          </div>
+        </div>
+        <div class="form-group mt-2">
+          <label class="form-label" for="id_reg_email">Email</label>
+          <input type="email" id="id_reg_email" name="email" class="form-control"
+                 placeholder="ivan@school.ru" required
+                 value="{{ form_data.email|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="id_username">Логин</label>
+          <input type="text" id="id_username" name="username" class="form-control"
+                 placeholder="ivan_ivanov" required
+                 value="{{ form_data.username|default:'' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="id_reg_password">Пароль</label>
+          <input type="password" id="id_reg_password" name="password" class="form-control"
+                 placeholder="Минимум 8 символов" required autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="id_password2">Повторите пароль</label>
+          <input type="password" id="id_password2" name="password2" class="form-control"
+                 placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Создать аккаунт</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    ИС «Геймификация Информатика» · РТУ МИРЭА 2026
+  </div>
+</div>
+
+<script>
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn, .tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.tab-btn:nth-child(${tab === 'login' ? 1 : 2})`).classList.add('active');
+    document.getElementById('pane-' + tab).classList.add('active');
+  }
+  // Если вернулись с ошибкой на регистрации — оставить вкладку
+  {% if tab == 'register' %}switchTab('register');{% endif %}
+</script>
+</body>
+</html>

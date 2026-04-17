@@ -1,0 +1,114 @@
+{% extends 'quiz_app/base.html' %}
+
+{% block title %}Мои классы — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .page-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+
+  .classes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+  .class-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition);
+  }
+  .class-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+  }
+  .class-name {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: .25rem;
+  }
+  .class-desc { font-size: .85rem; color: var(--text-secondary); margin-bottom: .75rem; }
+  .class-meta { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+  /* Форма создания */
+  .create-form-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    max-width: 480px;
+  }
+  .create-form-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">🏫 Мои классы</div>
+</div>
+
+{% if classes %}
+  <div class="classes-grid">
+    {% for cls in classes %}
+      <a class="class-card" href="{% url 'class_detail' cls.id %}">
+        <div class="class-name">{{ cls.name }}</div>
+        {% if cls.description %}
+          <div class="class-desc">{{ cls.description }}</div>
+        {% endif %}
+        <div class="class-meta">
+          <span class="badge badge-accent">👥 {{ cls.students.count }} учеников</span>
+          {% if cls.teacher %}
+            <span class="badge badge-purple">{{ cls.teacher.last_name }}</span>
+          {% endif %}
+          {% if not cls.is_active %}
+            <span class="badge badge-danger">Архив</span>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card" style="text-align:center;padding:2rem;margin-bottom:1.5rem">
+    <p class="text-muted">У вас пока нет классов. Создайте первый!</p>
+  </div>
+{% endif %}
+
+<!-- Форма создания класса -->
+<div class="create-form-wrap">
+  <div class="create-form-title">+ Создать новый класс</div>
+  <form method="post" action="{% url 'classes' %}">
+    {% csrf_token %}
+    <div class="form-group">
+      <label class="form-label">Название класса</label>
+      <input type="text" name="name" class="form-control"
+             placeholder="Например: 9А" required maxlength="20">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Описание (необязательно)</label>
+      <input type="text" name="description" class="form-control"
+             placeholder="Краткое описание">
+    </div>
+    <button type="submit" class="btn btn-primary">Создать класс</button>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,298 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ task.title }} — ИС Геймификация</title>
+  <link rel="stylesheet" href="{% static 'quiz_app/css/style.css' %}">
+  <style>
+    body { background: radial-gradient(ellipse at 50% 0%, rgba(79,142,247,.07) 0%, transparent 60%), var(--bg-deep); }
+    .game-topbar { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:1px solid var(--border); background:rgba(11,14,26,.85); backdrop-filter:blur(8px); position:sticky; top:0; z-index:10; }
+    .game-topbar-left { display:flex; align-items:center; gap:1rem; }
+    .game-title { font-family:var(--font-display); font-size:1.1rem; font-weight:700; }
+    .timer { font-family:var(--font-mono); font-size:1.1rem; color:var(--text-secondary); background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:.35rem .75rem; min-width:70px; text-align:center; }
+    .timer.urgent { color:var(--danger); border-color:var(--danger); animation:pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .game-wrap { max-width:760px; margin:2rem auto; padding:0 1rem; }
+    .task-info { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1.5rem; }
+    .task-info-title { font-family:var(--font-display); font-size:1.2rem; font-weight:700; margin-bottom:.4rem; }
+    .task-info-desc  { color:var(--text-secondary); font-size:.9rem; }
+    .task-meta { display:flex; gap:.75rem; margin-top:.75rem; flex-wrap:wrap; }
+    .current-value-display { text-align:center; margin:1.5rem 0; }
+    .current-value-label { font-size:.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:.5rem; }
+    .current-value-num { font-family:var(--font-display); font-size:5rem; font-weight:700; line-height:1; color:var(--text-primary); transition:all .2s; }
+    .current-value-num.changed { animation:valueChange .25s cubic-bezier(.34,1.56,.64,1); }
+    .current-value-num.success { color:var(--success); }
+    @keyframes valueChange { 0%{transform:scale(.85);opacity:.5} 100%{transform:scale(1);opacity:1} }
+    .target-row { display:flex; align-items:center; justify-content:center; gap:.5rem; margin-bottom:1.5rem; font-size:.9rem; color:var(--text-secondary); }
+    .target-val { font-family:var(--font-display); font-size:1.3rem; font-weight:700; color:var(--success); background:rgba(34,211,165,.1); border:1px solid rgba(34,211,165,.3); padding:.15rem .6rem; border-radius:6px; }
+    .ops-section { margin:1.5rem 0; }
+    .ops-label { text-align:center; font-size:.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:.75rem; }
+    .ops-btns { display:flex; gap:1rem; justify-content:center; }
+    .op-btn { font-family:var(--font-display); font-size:1.4rem; font-weight:700; padding:1rem 2.5rem; border-radius:var(--radius); border:2px solid var(--border-glow); background:var(--bg-card); color:var(--text-primary); cursor:pointer; transition:all .15s; min-width:140px; }
+    .op-btn:hover { border-color:var(--accent); color:var(--accent); box-shadow:var(--shadow-glow); transform:translateY(-3px); }
+    .op-btn:active { transform:translateY(0) scale(.97); }
+    .op-btn:disabled { opacity:.3; cursor:not-allowed; transform:none; }
+    .path-nodes { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; background:var(--bg-deep); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; min-height:52px; }
+    .path-node { font-family:var(--font-mono); font-size:.95rem; font-weight:600; padding:.2rem .5rem; border-radius:4px; background:var(--bg-hover); color:var(--text-primary); animation:popIn .15s ease; }
+    .path-node.current { background:rgba(79,142,247,.2); color:var(--accent); border:1px solid rgba(79,142,247,.4); }
+    .path-node.start   { background:rgba(34,211,165,.15); color:var(--success); }
+    .path-arrow { color:var(--text-muted); font-size:.8rem; }
+    @keyframes popIn { from{transform:scale(.7);opacity:0} to{transform:scale(1);opacity:1} }
+    .counters { display:flex; gap:1rem; justify-content:center; margin-bottom:1rem; }
+    .counter-badge { display:flex; align-items:center; gap:.4rem; font-family:var(--font-mono); font-size:.85rem; background:var(--bg-card); border:1px solid var(--border); border-radius:100px; padding:.3rem .8rem; }
+    .controls { display:flex; gap:.75rem; margin-top:1.5rem; }
+    .result-overlay { display:none; position:fixed; inset:0; background:rgba(11,14,26,.85); backdrop-filter:blur(8px); z-index:50; align-items:center; justify-content:center; }
+    .result-overlay.show { display:flex; }
+    .result-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:2.5rem 3rem; text-align:center; max-width:400px; width:90%; animation:fadeUp .35s ease; }
+    @keyframes fadeUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+    .result-icon  { font-size:4.5rem; margin-bottom:.5rem; }
+    .result-title { font-family:var(--font-display); font-size:1.8rem; font-weight:700; margin-bottom:.5rem; }
+    .result-desc  { color:var(--text-secondary); font-size:.9rem; margin-bottom:1.25rem; }
+    .result-xp    { font-family:var(--font-display); font-size:2.2rem; font-weight:700; color:var(--xp-color); margin:.75rem 0; }
+    .result-ach   { display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; margin:.75rem 0; }
+    .result-ach span { background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3); border-radius:100px; font-size:.8rem; padding:.2rem .7rem; color:var(--xp-color); }
+    .result-btns  { display:flex; gap:.75rem; justify-content:center; margin-top:1rem; }
+    .path-section { margin:1.25rem 0; }
+    .path-label { display:flex; justify-content:space-between; font-size:.78rem; color:var(--text-muted); margin-bottom:.4rem; text-transform:uppercase; letter-spacing:.06em; }
+  </style>
+</head>
+<body>
+
+<!-- Топбар -->
+<div class="game-topbar">
+  <div class="game-topbar-left">
+    <a href="{% url 'topic_detail' task.topic.id %}" class="btn btn-ghost btn-sm">← Назад</a>
+    <div class="game-title">{{ task.title }}</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:.75rem">
+    <div class="timer" id="timer">00:00</div>
+    <span class="badge badge-accent">
+      {% if task.difficulty == 1 %}🟢 Лёгкий
+      {% elif task.difficulty == 2 %}🟡 Средний
+      {% else %}🔴 Сложный{% endif %}
+    </span>
+    <span class="badge badge-warning">{{ task.xp_reward|add:task.xp_reward }} XP</span>
+  </div>
+</div>
+
+<!-- Игровое поле -->
+<div class="game-wrap">
+  <div class="task-info">
+    <div class="task-info-title">{{ task.title }}</div>
+    <div class="task-info-desc">{{ task.description|default:"Используй операции для достижения целевого значения." }}</div>
+    <div class="task-meta">
+      <span class="badge badge-accent">Математический путь</span>
+      <span class="badge badge-warning">{{ task.xp_reward }} × {{ task.difficulty }} XP</span>
+      <span class="badge badge-purple">Макс. {{ task.max_steps }} шагов</span>
+      {% if best_attempt %}
+        <span class="badge badge-success">Лучший: {{ best_attempt.steps_taken }} шагов</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Цель -->
+  <div class="target-row">
+    Нужно получить: <span class="target-val">{{ task.target_value }}</span>
+  </div>
+
+  <!-- Текущее значение -->
+  <div class="current-value-display">
+    <div class="current-value-label">Текущее значение</div>
+    <div class="current-value-num" id="current-val">{{ task.start_value }}</div>
+  </div>
+
+  <!-- Счётчики -->
+  <div class="counters">
+    <div class="counter-badge">
+      👣 Шагов: <span id="steps-count">0</span> / {{ task.max_steps }}
+    </div>
+    <div class="counter-badge" style="color:var(--danger)">
+      ❌ Ошибок: <span id="errors-count">0</span>
+    </div>
+  </div>
+
+  <!-- Операции -->
+  <div class="ops-section">
+    <div class="ops-label">Выбери операцию</div>
+    <div class="ops-btns">
+      <button class="op-btn" id="op1-btn" onclick="applyOp(1)">{{ task.operation_1 }}</button>
+      <button class="op-btn" id="op2-btn" onclick="applyOp(2)">{{ task.operation_2 }}</button>
+    </div>
+  </div>
+
+  <!-- Путь решения -->
+  <div class="path-section">
+    <div class="path-label">
+      <span>Путь решения</span>
+      <span id="path-len">0 шагов</span>
+    </div>
+    <div class="path-nodes" id="path-nodes">
+      <span class="path-node start">{{ task.start_value }}</span>
+    </div>
+  </div>
+
+  <!-- Кнопки управления -->
+  <div class="controls">
+    <button class="btn btn-ghost" onclick="undoStep()"     id="undo-btn" disabled>↩ Отменить</button>
+    <button class="btn btn-ghost" onclick="resetGame()">🔄 Сначала</button>
+    <button class="btn btn-primary" onclick="submitSolution()" id="submit-btn" style="margin-left:auto">
+      Проверить ✓
+    </button>
+  </div>
+</div>
+
+<!-- Оверлей результата -->
+<div class="result-overlay" id="result-overlay">
+  <div class="result-card">
+    <div class="result-icon"  id="res-icon">?</div>
+    <div class="result-title" id="res-title">—</div>
+    <div class="result-desc"  id="res-desc">—</div>
+    <div class="result-xp"    id="res-xp" style="display:none"></div>
+    <div class="result-ach"   id="res-ach"></div>
+    <div class="result-btns">
+      <button class="btn btn-ghost"   onclick="resetGame(); closeResult()">Попробовать ещё</button>
+      <a      class="btn btn-primary" href="{% url 'topic_detail' task.topic.id %}">К заданиям →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Данные задания для JS (передаются с сервера) -->
+<script>
+  // Все данные задания приходят с сервера — JS только управляет интерфейсом
+  const TASK = {{ task_json|safe }};
+  const SUBMIT_URL  = "{% url 'submit_answer' task.id %}";
+  const CSRF_TOKEN  = "{{ csrf_token }}";
+
+  // ── Состояние игры ──────────────────────────────────────
+  let path        = [TASK.start_value];
+  let errors      = 0;
+  let timerSecs   = 0;
+  let timerInterval;
+
+  // ── Операции ────────────────────────────────────────────
+  function parseOp(opStr) {
+    const op  = opStr[0];
+    const num = parseInt(opStr.slice(1));
+    if (isNaN(num)) return null;
+    return { '+': x => x + num, '-': x => x - num, '*': x => x * num, '/': x => Math.floor(x / num) }[op];
+  }
+
+  window.applyOp = function(opNum) {
+    const current = path[path.length - 1];
+    const fn      = parseOp(opNum === 1 ? TASK.operation_1 : TASK.operation_2);
+    if (!fn) return;
+    const next = fn(current);
+
+    path.push(next);
+    renderPath();
+    updateCurrentVal(next);
+    updateCounters();
+
+    if (next === TASK.target_value)                             setTimeout(submitSolution, 300);
+    if (path.length - 1 >= TASK.max_steps && next !== TASK.target_value) showResult(false, 'Превышено максимальное количество шагов!', 0, []);
+  };
+
+  // ── Отмена ──────────────────────────────────────────────
+  window.undoStep = function() {
+    if (path.length <= 1) return;
+    path.pop();
+    renderPath();
+    updateCurrentVal(path[path.length - 1]);
+    updateCounters();
+  };
+
+  // ── Сброс ───────────────────────────────────────────────
+  window.resetGame = function() {
+    path = [TASK.start_value];
+    errors = 0;
+    renderPath();
+    updateCurrentVal(TASK.start_value);
+    updateCounters();
+    stopTimer(); startTimer();
+  };
+
+  // ── Отправка на сервер ──────────────────────────────────
+  window.submitSolution = async function() {
+    stopTimer();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res  = await fetch(SUBMIT_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body:    JSON.stringify({ solution_path: path, steps_taken: path.length - 1, time_spent: timerSecs, errors_made: errors }),
+      });
+      const data = await res.json();
+      showResult(data.is_success, data.message, data.xp_earned, data.new_achievements || []);
+    } catch(e) {
+      console.error(e);
+      btn.disabled = false;
+      btn.textContent = 'Проверить ✓';
+    }
+  };
+
+  // ── Рендер ──────────────────────────────────────────────
+  function renderPath() {
+    const c = document.getElementById('path-nodes');
+    c.innerHTML = '';
+    path.forEach((val, i) => {
+      if (i > 0) { const a = document.createElement('span'); a.className = 'path-arrow'; a.textContent = '→'; c.appendChild(a); }
+      const n = document.createElement('span');
+      n.className = 'path-node' + (i === 0 ? ' start' : '') + (i === path.length - 1 && i > 0 ? ' current' : '');
+      n.textContent = val;
+      c.appendChild(n);
+    });
+    document.getElementById('path-len').textContent = `${path.length - 1} шагов`;
+  }
+
+  function updateCurrentVal(val) {
+    const el = document.getElementById('current-val');
+    el.classList.remove('changed', 'success');
+    void el.offsetWidth;
+    el.textContent = val;
+    el.classList.add('changed');
+    if (val === TASK.target_value) el.classList.add('success');
+  }
+
+  function updateCounters() {
+    document.getElementById('steps-count').textContent = path.length - 1;
+    document.getElementById('errors-count').textContent = errors;
+    document.getElementById('undo-btn').disabled = path.length <= 1;
+  }
+
+  function showResult(success, message, xpEarned, achievements) {
+    document.getElementById('res-icon').textContent  = success ? '🎉' : '😔';
+    document.getElementById('res-title').textContent = success ? 'Правильно!' : 'Не получилось';
+    document.getElementById('res-desc').textContent  = message;
+    const xpEl = document.getElementById('res-xp');
+    if (success && xpEarned > 0) { xpEl.textContent = `+${xpEarned} XP`; xpEl.style.display = ''; }
+    else { xpEl.style.display = 'none'; }
+    const achEl = document.getElementById('res-ach');
+    achEl.innerHTML = achievements.map(a => `<span>🏆 ${a}</span>`).join('');
+    document.getElementById('result-overlay').classList.add('show');
+  }
+
+  window.closeResult = () => document.getElementById('result-overlay').classList.remove('show');
+
+  // ── Таймер ──────────────────────────────────────────────
+  function startTimer() {
+    timerSecs = 0;
+    timerInterval = setInterval(() => {
+      timerSecs++;
+      const m  = String(Math.floor(timerSecs / 60)).padStart(2, '0');
+      const s  = String(timerSecs % 60).padStart(2, '0');
+      const el = document.getElementById('timer');
+      el.textContent = `${m}:${s}`;
+      el.classList.toggle('urgent', timerSecs > 120);
+    }, 1000);
+  }
+  function stopTimer() { clearInterval(timerInterval); }
+
+  startTimer();
+</script>
+</body>
+</html>

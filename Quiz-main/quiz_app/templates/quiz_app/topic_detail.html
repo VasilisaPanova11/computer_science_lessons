@@ -1,0 +1,249 @@
+{% extends 'quiz_app/base.html' %}
+
+{% block title %}{{ topic.title }} — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+
+{% load quiz_extras %}
+<style>
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .85rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+  }
+  .breadcrumb a { color: var(--text-secondary); }
+  .breadcrumb a:hover { color: var(--accent); }
+  .breadcrumb-sep { color: var(--text-muted); }
+
+  .topic-header {
+    margin-bottom: 1.5rem;
+  }
+  .topic-header h1 {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: .4rem;
+  }
+
+  /* Теория */
+  .theory-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.75rem;
+    font-size: .92rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+  }
+  .theory-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: .6rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+
+  /* Прогресс темы */
+  .topic-progress-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .tp-stat { text-align: center; flex-shrink: 0; }
+  .tp-stat-val { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; }
+  .tp-stat-lbl { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .tp-bar-wrap { flex: 1; }
+  .tp-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: .78rem;
+    color: var(--text-muted);
+    margin-bottom: .35rem;
+  }
+
+  /* Список заданий */
+  .tasks-section-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: .75rem;
+    transition: all var(--transition);
+    text-decoration: none;
+    color: inherit;
+  }
+  .task-item:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-glow);
+    transform: translateX(3px);
+  }
+  .task-item.completed {
+    border-color: rgba(34,211,165,.3);
+    background: linear-gradient(90deg, var(--bg-card), rgba(34,211,165,.03));
+  }
+
+  .task-status {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    background: var(--bg-deep);
+    border: 2px solid var(--border);
+  }
+  .task-status.done { background: rgba(34,211,165,.1); border-color: var(--success); }
+
+  .task-info-wrap { flex: 1; }
+  .task-name { font-weight: 600; font-size: .95rem; margin-bottom: .2rem; }
+  .task-meta-row {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+  }
+
+  .task-xp { font-family: var(--font-mono); font-size: .82rem; color: var(--xp-color); margin-left: auto; }
+
+  /* Кнопки учителя */
+  .teacher-actions {
+    margin-bottom: 1.25rem;
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Хлебные крошки -->
+<div class="breadcrumb">
+  <a href="{% url 'subjects' %}">Разделы</a>
+  <span class="breadcrumb-sep">›</span>
+  <span>{{ topic.subject.title }}</span>
+  <span class="breadcrumb-sep">›</span>
+  <span>{{ topic.title }}</span>
+</div>
+
+<!-- Заголовок темы -->
+<div class="topic-header">
+  <h1>{{ topic.title }}</h1>
+  {% if topic.description %}
+    <p class="text-muted">{{ topic.description }}</p>
+  {% endif %}
+</div>
+
+<!-- Кнопки учителя -->
+{% if user.role == 'teacher' or user.role == 'admin' %}
+  <div class="teacher-actions">
+    <a href="{% url 'task_create' topic.id %}" class="btn btn-primary btn-sm">+ Добавить задание</a>
+  </div>
+{% endif %}
+
+<!-- Прогресс по теме (только для ученика) -->
+{% if progress %}
+  <div class="topic-progress-card">
+    <div class="tp-stat">
+      <div class="tp-stat-val text-success">{{ progress.tasks_completed }}</div>
+      <div class="tp-stat-lbl">Выполнено</div>
+    </div>
+    <div class="tp-bar-wrap">
+      <div class="tp-bar-label">
+        <span>Прогресс темы</span>
+        <span>{{ progress.completion_percent }}%</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar" style="width:{{ progress.completion_percent }}%"></div>
+      </div>
+    </div>
+    <div class="tp-stat">
+      <div class="tp-stat-val text-danger">{{ progress.total_errors }}</div>
+      <div class="tp-stat-lbl">Ошибок</div>
+    </div>
+    <div class="tp-stat">
+      <div class="tp-stat-val text-accent">{{ progress.total_xp_earned }}</div>
+      <div class="tp-stat-lbl">XP</div>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Теоретический материал -->
+{% if topic.theory_text %}
+  <div class="theory-block">
+    <div class="theory-title">📖 Теория</div>
+    {{ topic.theory_text }}
+  </div>
+{% endif %}
+
+<!-- Список заданий -->
+<div class="tasks-section-title">
+  🎯 Задания
+  <span class="badge badge-accent">{{ tasks.count }}</span>
+</div>
+
+{% if tasks %}
+  {% for task in tasks %}
+    {% with is_done=task.id|object_in:completed_task_ids %}
+    <a class="task-item {% if is_done %}completed{% endif %}"
+       href="{% url 'game' task.id %}">
+      <div class="task-status {% if is_done %}done{% endif %}">
+        {% if is_done %}✓{% else %}{{ forloop.counter }}{% endif %}
+      </div>
+      <div class="task-info-wrap">
+        <div class="task-name">{{ task.title }}</div>
+        <div class="task-meta-row">
+          <span class="badge badge-{% if task.difficulty == 1 %}success{% elif task.difficulty == 2 %}warning{% else %}danger{% endif %}">
+            {% if task.difficulty == 1 %}Лёгкий{% elif task.difficulty == 2 %}Средний{% else %}Сложный{% endif %}
+          </span>
+          {% if task.task_type == 'math_path' %}
+            <span class="badge badge-purple">
+              {{ task.start_value }} → {{ task.target_value }}
+            </span>
+            <span class="badge badge-accent">
+              {{ task.operation_1 }} / {{ task.operation_2 }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <span class="task-xp">+{{ task.xp_reward|add:task.xp_reward }} XP</span>
+    </a>
+    {% endwith %}
+  {% endfor %}
+{% else %}
+  <div class="card" style="text-align:center;padding:2rem">
+    <p class="text-muted">В этой теме пока нет заданий.</p>
+    {% if user.role == 'teacher' or user.role == 'admin' %}
+      <a href="{% url 'task_create' topic.id %}" class="btn btn-primary mt-2">Добавить первое задание</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends 'quiz_app/base.html' %}
+{% load quiz_extras %}
+
+{% block title %}Разделы — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .subject-block { margin-bottom: 2.5rem; }
+  .subject-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .subject-icon  { font-size: 1.8rem; }
+  .subject-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
+  .subject-desc  { font-size: .85rem; color: var(--text-secondary); margin-top: .1rem; }
+
+  .topics-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 1rem; }
+
+  .topic-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition);
+  }
+  .topic-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+  }
+  .topic-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: .5rem;
+  }
+  .topic-title-text { font-weight: 600; font-size: .95rem; }
+  .topic-tasks-count { font-size: .78rem; color: var(--text-muted); margin-top: .25rem; }
+  .topic-progress-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: .75rem;
+    color: var(--text-muted);
+    margin: .6rem 0 .3rem;
+  }
+  .topic-no-progress { font-size: .78rem; color: var(--text-muted); margin-top: .5rem; }
+
+  .page-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-secondary);
+  }
+  .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">📚 Учебные разделы</div>
+
+{% if subjects %}
+  {% for subject in subjects %}
+    <div class="subject-block">
+      <div class="subject-header">
+        <span class="subject-icon">{{ subject.icon|default:"📖" }}</span>
+        <div>
+          <div class="subject-title">{{ subject.title }}</div>
+          {% if subject.description %}
+            <div class="subject-desc">{{ subject.description }}</div>
+          {% endif %}
+        </div>
+        <span class="badge badge-accent" style="margin-left:auto">
+          {{ subject.topics.count }} тем
+        </span>
+      </div>
+
+      {% if subject.topics.all %}
+        <div class="topics-list">
+          {% for topic in subject.topics.all %}
+            <a class="topic-card" href="{% url 'topic_detail' topic.id %}">
+              <div class="topic-card-top">
+                <div>
+                  <div class="topic-title-text">{{ topic.title }}</div>
+                  <div class="topic-tasks-count">
+                    {{ topic.tasks.count }} задани{{ topic.tasks.count|pluralize:"е,я,й" }}
+                  </div>
+                </div>
+                {% with prog=user_progress|default:None %}
+                  {% if user_progress and topic.id in user_progress %}
+                    {% if user_progress|get_item:topic.id is not None %}
+                      {% if user_progress|get_item:topic.id.is_completed %}
+                        <span class="badge badge-success">✓</span>
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                {% endwith %}
+              </div>
+
+              {% if user_progress and topic.id in user_progress %}
+                {% with p=user_progress|get_item:topic.id %}
+                  <div class="topic-progress-row">
+                    <span>{{ p.tasks_completed }}/{{ p.tasks_total }} заданий</span>
+                    <span>{{ p.completion_percent }}%</span>
+                  </div>
+                  <div class="progress-wrap">
+                    <div class="progress-bar" style="width:{{ p.completion_percent }}%"></div>
+                  </div>
+                {% endwith %}
+              {% else %}
+                <div class="topic-no-progress">Не начато</div>
+                <div class="progress-wrap" style="margin-top:.4rem">
+                  <div class="progress-bar" style="width:0%"></div>
+                </div>
+              {% endif %}
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted" style="font-size:.9rem">В этом разделе пока нет тем.</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <p>Учебных разделов пока нет.</p>
+    {% if user.role == 'teacher' or user.role == 'admin' %}
+      <p class="mt-2">Добавьте разделы через <a href="/admin/">панель администратора</a>.</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

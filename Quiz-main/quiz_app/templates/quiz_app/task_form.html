@@ -1,0 +1,173 @@
+{% extends 'quiz_app/base.html' %}
+
+{% block title %}Новое задание — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .breadcrumb { display:flex; align-items:center; gap:.5rem; font-size:.85rem; color:var(--text-muted); margin-bottom:1.25rem; }
+  .breadcrumb a { color:var(--text-secondary); }
+  .breadcrumb a:hover { color:var(--accent); }
+
+  .form-card { max-width: 640px; }
+  .form-title { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; }
+
+  .section-divider {
+    font-size: .78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-muted);
+    margin: 1.5rem 0 1rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .two-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .form-hint { font-size: .78rem; color: var(--text-muted); margin-top: .3rem; }
+
+  /* Скрываемые секции по типу задания */
+  .type-section { display: none; }
+  .type-section.visible { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'subjects' %}">Разделы</a>
+  <span>›</span>
+  <a href="{% url 'topic_detail' topic.id %}">{{ topic.title }}</a>
+  <span>›</span>
+  <span>Новое задание</span>
+</div>
+
+<div class="form-card">
+  <div class="form-title">+ Создать задание</div>
+
+  <form method="post" action="{% url 'task_create' topic.id %}">
+    {% csrf_token %}
+
+    <!-- Основное -->
+    <div class="form-group">
+      <label class="form-label">Название задания *</label>
+      <input type="text" name="title" class="form-control"
+             placeholder="Например: От 1 до 16" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Описание / условие</label>
+      <textarea name="description" class="form-control" rows="2"
+                placeholder="Краткое описание задания для ученика"></textarea>
+    </div>
+
+    <div class="two-inputs">
+      <div class="form-group">
+        <label class="form-label">Тип задания *</label>
+        <select name="task_type" class="form-control" id="task-type-select" onchange="updateTypeFields()">
+          {% for value, label in task_types %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Сложность *</label>
+        <select name="difficulty" class="form-control">
+          <option value="1">🟢 Лёгкий</option>
+          <option value="2" selected>🟡 Средний</option>
+          <option value="3">🔴 Сложный</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="two-inputs">
+      <div class="form-group">
+        <label class="form-label">Базовый XP</label>
+        <input type="number" name="xp_reward" class="form-control" value="10" min="1" max="100">
+        <div class="form-hint">Итоговый XP = Базовый × Сложность</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Порядок отображения</label>
+        <input type="number" name="order" class="form-control" value="0" min="0">
+      </div>
+    </div>
+
+    <!-- Поля для math_path -->
+    <div class="type-section visible" id="section-math_path">
+      <div class="section-divider">Параметры задания «Математический путь»</div>
+      <div class="two-inputs">
+        <div class="form-group">
+          <label class="form-label">Начальное значение *</label>
+          <input type="number" name="start_value" class="form-control" placeholder="Например: 1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Целевое значение *</label>
+          <input type="number" name="target_value" class="form-control" placeholder="Например: 16">
+        </div>
+      </div>
+      <div class="two-inputs">
+        <div class="form-group">
+          <label class="form-label">Операция 1 *</label>
+          <input type="text" name="operation_1" class="form-control" placeholder="Например: *2">
+          <div class="form-hint">Формат: +N, -N, *N, /N</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Операция 2 *</label>
+          <input type="text" name="operation_2" class="form-control" placeholder="Например: +1">
+        </div>
+      </div>
+      <div class="two-inputs">
+        <div class="form-group">
+          <label class="form-label">Максимум шагов</label>
+          <input type="number" name="max_steps" class="form-control" value="10" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Оптимальное кол-во шагов</label>
+          <input type="number" name="optimal_steps" class="form-control"
+                 placeholder="Необязательно">
+          <div class="form-hint">Бонус XP при ≤ оптимума</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Поля для текстового ответа -->
+    <div class="type-section" id="section-text_input">
+      <div class="section-divider">Параметры задания «Развёрнутый ответ»</div>
+      <div class="form-group">
+        <label class="form-label">Правильный ответ</label>
+        <input type="text" name="correct_answer_text" class="form-control"
+               placeholder="Ответ проверяется без учёта регистра">
+      </div>
+    </div>
+
+    <!-- Поля для тестов (варианты добавляются в Django Admin) -->
+    <div class="type-section" id="section-single">
+      <div class="section-divider">Тест с вариантами ответов</div>
+      <div class="alert alert-info show">
+        Варианты ответов добавляются через
+        <a href="/admin/quiz_app/task/" target="_blank">панель администратора</a>
+        после создания задания.
+      </div>
+    </div>
+    <div class="type-section" id="section-multi">
+      <div class="section-divider">Тест с несколькими ответами</div>
+      <div class="alert alert-info show">
+        Варианты ответов добавляются через
+        <a href="/admin/quiz_app/task/" target="_blank">панель администратора</a>
+        после создания задания.
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;display:flex;gap:.75rem">
+      <button type="submit" class="btn btn-primary">Создать задание</button>
+      <a href="{% url 'topic_detail' topic.id %}" class="btn btn-ghost">Отмена</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  function updateTypeFields() {
+    const val = document.getElementById('task-type-select').value;
+    document.querySelectorAll('.type-section').forEach(s => s.classList.remove('visible'));
+    const target = document.getElementById('section-' + val);
+    if (target) target.classList.add('visible');
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'quiz_app/base.html' %}
+{% load static %}
+
+{% block title %}Дашборд — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .welcome-banner {
+    background:linear-gradient(135deg,#111b3a,#0d1428);
+    border:1px solid var(--border-glow); border-radius:var(--radius-lg);
+    padding:1.75rem 2rem; display:flex; align-items:center; gap:1.5rem;
+    margin-bottom:1.5rem; position:relative; overflow:hidden;
+  }
+  .welcome-banner::after { content:'🎮'; position:absolute; right:1.5rem; top:50%; transform:translateY(-50%); font-size:4rem; opacity:.1; }
+  .welcome-avatar { width:60px;height:60px; border-radius:50%; border:3px solid var(--accent); background:var(--bg-hover); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--accent); flex-shrink:0; }
+  .welcome-text h2 { font-family:var(--font-display); font-size:1.4rem; font-weight:700; }
+  .welcome-text p  { color:var(--text-secondary); font-size:.9rem; margin-top:.2rem; }
+  .xp-banner { margin-left:auto; text-align:right; min-width:180px; }
+  .xp-banner-level { font-family:var(--font-display); font-size:1rem; color:var(--xp-color); margin-bottom:.4rem; }
+  .xp-banner-text  { font-size:.75rem; color:var(--text-muted); font-family:var(--font-mono); }
+
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+  .section-title  { font-family:var(--font-display); font-size:1.15rem; font-weight:700; letter-spacing:.04em; }
+
+  .topics-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+  .topic-card  { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; cursor:pointer; transition:all var(--transition); text-decoration:none; color:inherit; display:block; }
+  .topic-card:hover { border-color:var(--accent); transform:translateY(-3px); box-shadow:var(--shadow-glow); }
+  .topic-subject { font-size:.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; }
+  .topic-title   { font-weight:600; font-size:.95rem; margin:.3rem 0 .6rem; }
+  .topic-progress-label { display:flex; justify-content:space-between; font-size:.75rem; color:var(--text-muted); margin-bottom:.3rem; }
+
+  .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+  @media(max-width:800px){.bottom-grid{grid-template-columns:1fr;}}
+
+  .ach-mini-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(44px,1fr)); gap:.5rem; }
+  .ach-mini { width:44px;height:44px; border-radius:10px; background:var(--bg-deep); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:1.4rem; position:relative; }
+  .ach-mini.earned  { border-color:rgba(251,191,36,.5); background:rgba(251,191,36,.05); }
+  .ach-mini.locked  { filter:grayscale(1); opacity:.3; }
+
+  .activity-item { display:flex; align-items:center; gap:.75rem; padding:.6rem 0; border-bottom:1px solid var(--border); }
+  .activity-item:last-child { border-bottom:none; }
+  .activity-icon { width:32px;height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+  .activity-icon.ok   { background:rgba(34,211,165,.15); }
+  .activity-icon.fail { background:rgba(242,92,126,.15); }
+  .activity-xp   { font-family:var(--font-mono); font-size:.8rem; color:var(--xp-color); }
+  .activity-time { font-size:.75rem; color:var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Приветственный баннер -->
+<div class="welcome-banner">
+  <div class="welcome-avatar">{{ user.first_name|first }}{{ user.last_name|first }}</div>
+  <div class="welcome-text">
+    <h2>Привет, {{ user.first_name }}! 👋</h2>
+    <p>
+      {% if total_done == 0 %}Начни первое задание прямо сейчас!
+      {% else %}Выполнено заданий: {{ total_done }}. Продолжай в том же духе!
+      {% endif %}
+    </p>
+  </div>
+  <div class="xp-banner">
+    <div class="xp-banner-level">⚡ Уровень {{ user.game_level }}</div>
+    <div class="progress-wrap" style="margin-bottom:.3rem">
+      <div class="progress-bar progress-bar--xp" style="width:{{ user.xp_progress_percent }}%"></div>
+    </div>
+    <div class="xp-banner-text">{{ user.total_xp }} XP · до след. уровня {{ user.xp_to_next_level }} XP</div>
+  </div>
+</div>
+
+<!-- Статистика -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon">✅</div>
+    <div class="stat-value text-success">{{ total_done }}</div>
+    <div class="stat-label">Заданий выполнено</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">❌</div>
+    <div class="stat-value text-danger">{{ total_errors }}</div>
+    <div class="stat-label">Всего ошибок</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🏆</div>
+    <div class="stat-value">{% if rank %}#{{ rank }}{% else %}—{% endif %}</div>
+    <div class="stat-label">Место в классе</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🔥</div>
+    <div class="stat-value text-accent">{{ user.streak_days }}</div>
+    <div class="stat-label">Дней подряд</div>
+  </div>
+</div>
+
+<!-- Прогресс по темам -->
+<div class="section-header">
+  <div class="section-title">📚 Прогресс по темам</div>
+  <a href="{% url 'subjects' %}" class="btn btn-ghost btn-sm">Все разделы →</a>
+</div>
+
+{% if progress %}
+  <div class="topics-grid">
+    {% for p in progress|slice:":6" %}
+      <a class="topic-card" href="{% url 'topic_detail' p.topic.id %}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+          <span class="topic-subject">{{ p.topic.subject.title }}</span>
+          {% if p.is_completed %}<span class="badge badge-success">✓</span>{% endif %}
+        </div>
+        <div class="topic-title">{{ p.topic.title }}</div>
+        <div class="topic-progress-label">
+          <span>{{ p.tasks_completed }} / {{ p.tasks_total }} заданий</span>
+          <span>{{ p.completion_percent }}%</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:{{ p.completion_percent }}%"></div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card" style="text-align:center;padding:2rem;margin-bottom:1.5rem">
+    <p class="text-muted">Ты ещё не начал ни одного задания.</p>
+    <a href="{% url 'subjects' %}" class="btn btn-primary mt-2">Начать обучение →</a>
+  </div>
+{% endif %}
+
+<!-- Ачивки + активность -->
+<div class="bottom-grid">
+  <div class="card">
+    <div class="section-header" style="margin-bottom:.75rem">
+      <div class="section-title">🎖 Достижения</div>
+      <a href="{% url 'achievements' %}" class="btn btn-ghost btn-sm">Все →</a>
+    </div>
+    <div class="ach-mini-grid">
+      {% for a in all_achs|slice:":12" %}
+        <div class="ach-mini {% if a.id in earned_ids %}earned{% else %}locked{% endif %}"
+             title="{{ a.title }}">{{ a.icon }}</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title mb-2">⚡ Последние задания</div>
+    {% if recent %}
+      {% for att in recent %}
+        <div class="activity-item">
+          <div class="activity-icon {% if att.is_success %}ok{% else %}fail{% endif %}">
+            {% if att.is_success %}✅{% else %}❌{% endif %}
+          </div>
+          <div style="flex:1">
+            <div style="font-weight:500;font-size:.85rem">{{ att.task.title }}</div>
+            <div style="font-size:.75rem;color:var(--text-muted)">Ошибок: {{ att.errors_made }}</div>
+          </div>
+          <div style="text-align:right">
+            {% if att.is_success %}<div class="activity-xp">+{{ att.xp_earned }} XP</div>{% endif %}
+            <div class="activity-time">{{ att.started_at|date:"d.m" }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted" style="font-size:.85rem">Пока нет активности</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends 'quiz_app/base.html' %}
+
+{% block title %}Профиль — ИС Геймификация{% endblock %}
+
+{% block extra_css %}
+<style>
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media(max-width:800px){ .profile-grid{ grid-template-columns:1fr; } }
+
+  .profile-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .profile-avatar-wrap { position: relative; display: inline-block; margin-bottom: 1rem; }
+  .profile-avatar {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    background: var(--bg-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    overflow: hidden;
+    margin: 0 auto;
+  }
+  .profile-avatar img { width:100%; height:100%; object-fit:cover; }
+  .profile-name  { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; margin-bottom: .2rem; }
+  .profile-role  { font-size: .8rem; color: var(--text-muted); margin-bottom: .75rem; }
+  .profile-email { font-size: .85rem; color: var(--text-secondary); }
+
+  .profile-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+    margin: 1rem 0;
+    text-align: center;
+  }
+  .ps-item { padding: .6rem; background: var(--bg-deep); border-radius: var(--radius-sm); }
+  .ps-val  { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; }
+  .ps-lbl  { font-size: .72rem; color: var(--text-muted); }
+
+  .xp-progress-wrap { margin: 1rem 0; }
+  .xp-progress-label {
+    display: flex; justify-content: space-between;
+    font-size: .75rem; color: var(--text-muted); margin-bottom: .35rem;
+  }
+
+  /* Вкладки */
+  .tabs-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+    gap: .25rem;
+  }
+  .tab-link {
+    padding: .55rem 1rem;
+    font-size: .88rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    margin-bottom: -1px;
+  }
+  .tab-link:hover { color: var(--text-primary); }
+  .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* История попыток */
+  .attempt-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+  }
+  .attempt-row:last-child { border-bottom: none; }
+  .attempt-status {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    flex-shrink: 0;
+  }
+  .attempt-status.ok   { background: rgba(34,211,165,.15); }
+  .attempt-status.fail { background: rgba(242,92,126,.15); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+  {% for msg in messages %}
+    <div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} show" style="margin-bottom:1rem">{{ msg }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="profile-grid">
+  <!-- Левая колонка: карточка профиля -->
+  <div>
+    <div class="profile-card">
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar">
+          {% if user.avatar %}
+            <img src="{{ user.avatar.url }}" alt="Аватар">
+          {% else %}
+            {{ user.first_name|first }}{{ user.last_name|first }}
+          {% endif %}
+        </div>
+      </div>
+      <div class="profile-name">{{ user.get_full_name }}</div>
+      <div class="profile-role">{{ user.get_role_display }}</div>
+      <div class="profile-email">{{ user.email }}</div>
+
+      <div class="profile-stats">
+        <div class="ps-item">
+          <div class="ps-val text-accent">{{ user.game_level }}</div>
+          <div class="ps-lbl">Уровень</div>
+        </div>
+        <div class="ps-item">
+          <div class="ps-val" style="color:var(--xp-color)">{{ user.total_xp }}</div>
+          <div class="ps-lbl">XP</div>
+        </div>
+        <div class="ps-item">
+          <div class="ps-val" style="color:var(--danger)">🔥 {{ user.streak_days }}</div>
+          <div class="ps-lbl">Дней подряд</div>
+        </div>
+        <div class="ps-item">
+          <div class="ps-val text-success">{{ achievements.count }}</div>
+          <div class="ps-lbl">Ачивок</div>
+        </div>
+      </div>
+
+      <div class="xp-progress-wrap">
+        <div class="xp-progress-label">
+          <span>До уровня {{ user.game_level|add:1 }}</span>
+          <span>{{ user.xp_progress_percent }}%</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar progress-bar--xp" style="width:{{ user.xp_progress_percent }}%"></div>
+        </div>
+      </div>
+
+      {% if user.class_group %}
+        <div style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+          🏫 Класс: {{ user.class_group.name }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Правая колонка: вкладки -->
+  <div>
+    <div class="tabs-bar">
+      <button class="tab-link active" onclick="switchTab('edit')">✏️ Редактировать</button>
+      <button class="tab-link"        onclick="switchTab('password')">🔑 Пароль</button>
+      <button class="tab-link"        onclick="switchTab('history')">📋 История</button>
+    </div>
+
+    <!-- Вкладка: редактирование профиля -->
+    <div class="tab-pane active" id="pane-edit">
+      <form method="post" action="{% url 'profile' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_profile">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="form-group">
+            <label class="form-label">Фамилия</label>
+            <input type="text" name="last_name" class="form-control"
+                   value="{{ user.last_name }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Имя</label>
+            <input type="text" name="first_name" class="form-control"
+                   value="{{ user.first_name }}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Отчество</label>
+          <input type="text" name="patronymic" class="form-control"
+                 value="{{ user.patronymic }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Аватар</label>
+          <input type="file" name="avatar" class="form-control"
+                 accept="image/*" style="padding:.5rem">
+        </div>
+        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+      </form>
+    </div>
+
+    <!-- Вкладка: смена пароля -->
+    <div class="tab-pane" id="pane-password">
+      <form method="post" action="{% url 'profile' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="change_password">
+        <div class="form-group">
+          <label class="form-label">Текущий пароль</label>
+          <input type="password" name="old_password" class="form-control"
+                 placeholder="••••••••" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Новый пароль</label>
+          <input type="password" name="new_password" class="form-control"
+                 placeholder="Минимум 8 символов" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Повторите новый пароль</label>
+          <input type="password" name="new_password2" class="form-control"
+                 placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Изменить пароль</button>
+      </form>
+    </div>
+
+    <!-- Вкладка: история попыток -->
+    <div class="tab-pane" id="pane-history">
+      {% if recent %}
+        {% for att in recent %}
+          <div class="attempt-row">
+            <div class="attempt-status {% if att.is_success %}ok{% else %}fail{% endif %}">
+              {% if att.is_success %}✅{% else %}❌{% endif %}
+            </div>
+            <div style="flex:1">
+              <div style="font-weight:500">{{ att.task.title }}</div>
+              <div style="font-size:.75rem;color:var(--text-muted)">
+                Ошибок: {{ att.errors_made }} · {{ att.time_spent }} сек
+              </div>
+            </div>
+            {% if att.is_success %}
+              <span style="font-family:var(--font-mono);font-size:.82rem;color:var(--xp-color)">
+                +{{ att.xp_earned }} XP
+              </span>
+            {% endif %}
+            <span style="font-size:.75rem;color:var(--text-muted)">
+              {{ att.started_at|date:"d.m.Y" }}
+            </span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted" style="font-size:.9rem">История пуста.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.tab-link, .tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.tab-link[onclick="switchTab('${name}')"]`).classList.add('active');
+    document.getElementById('pane-' + name).classList.add('active');
+  }
+</script>
+
+{% endblock %}
